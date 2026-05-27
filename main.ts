@@ -84,6 +84,7 @@ export default class RelayShareLinkPlugin extends Plugin {
           ? file.path.slice(share.path.length + 1)
           : file.path;
     const params = new URLSearchParams();
+    params.set("vault", this.app.vault.getName());
     params.set("share", share.relayId);
     params.set("path", rel);
     if (share.name) params.set("name", share.name);
