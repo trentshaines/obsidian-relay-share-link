@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Open in Obsidian</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f6f7;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b6b73;
+      --border: #e4e4e7;
+      --accent: #6f3ed1;
+      --accent-hover: #5a2eb0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1c;
+        --card: #242428;
+        --text: #f0f0f2;
+        --muted: #9c9ca8;
+        --border: #34343a;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 4rem 1rem;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg);
+    }
+    main {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
+    p { margin: 0.5rem 0; }
+    .muted { color: var(--muted); font-size: 0.875rem; }
+    .summary {
+      font-size: 0.9375rem;
+      padding: 0.625rem 0.75rem;
+      background: var(--bg);
+      border-radius: 6px;
+      margin: 0.75rem 0 1.25rem;
+      word-break: break-word;
+    }
+    .summary .share-name { color: var(--muted); }
+    label { display: block; margin-bottom: 0.375rem; font-size: 0.9375rem; }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 1rem;
+      background: var(--card);
+      color: var(--text);
+      margin-bottom: 0.875rem;
+    }
+    input[type="text"]:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+      border-color: var(--accent);
+    }
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    button:hover { background: var(--accent-hover); }
+    button.link {
+      background: none;
+      color: var(--muted);
+      padding: 0;
+      font-size: 0.8125rem;
+      text-decoration: underline;
+    }
+    button.link:hover { color: var(--accent); background: none; }
+    a { color: var(--accent); }
+    .actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.75rem; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Open in Obsidian</h1>
+    <div id="summary" class="summary muted">Loading link…</div>
+
+    <div id="opening" hidden>
+      <p>Opening in vault <strong id="opening-vault"></strong>…</p>
+      <p class="muted">If nothing happened, <a id="manual-link" href="#">click here to retry</a>, or make sure the <em>Relay Share Link</em> plugin is enabled in that vault.</p>
+      <div class="actions">
+        <button id="change-vault" type="button" class="link">Wrong vault? Change it.</button>
+      </div>
+    </div>
+
+    <form id="vault-form" hidden>
+      <label for="vault-input">Which Obsidian vault has the <strong id="form-share-name"></strong> share?</label>
+      <input id="vault-input" type="text" required autofocus autocomplete="off" placeholder="e.g. Fleet">
+      <div class="actions">
+        <button type="submit">Open in Obsidian</button>
+        <span class="muted">Saved on this device for next time.</span>
+      </div>
+    </form>
+
+    <div id="missing" hidden>
+      <p>This page needs a Relay share link.</p>
+      <p class="muted">Expected URL: <code>?share=&lt;uuid&gt;&amp;path=&lt;relative-path&gt;&amp;name=&lt;share-name&gt;</code></p>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const share = params.get("share");
+      const path = params.get("path") || "";
+      const name = params.get("name") || "(shared folder)";
+      const STORAGE_KEY = "relay-share-link:vault";
+
+      const $ = (id) => document.getElementById(id);
+      const summary = $("summary");
+      const opening = $("opening");
+      const openingVault = $("opening-vault");
+      const manualLink = $("manual-link");
+      const changeVault = $("change-vault");
+      const vaultForm = $("vault-form");
+      const vaultInput = $("vault-input");
+      const formShareName = $("form-share-name");
+      const missing = $("missing");
+
+      if (!share) {
+        summary.hidden = true;
+        missing.hidden = false;
+        return;
+      }
+
+      const decoded = (() => {
+        try { return decodeURIComponent(path); } catch (_) { return path; }
+      })();
+      summary.innerHTML = `<span class="share-name"></span><span class="path"></span>`;
+      summary.querySelector(".share-name").textContent = name + (decoded ? " / " : "");
+      summary.querySelector(".path").textContent = decoded || "(folder root)";
+
+      function buildUrl(vault) {
+        const u = new URLSearchParams({ vault, share, path, name });
+        return "obsidian://relay-share?" + u.toString();
+      }
+
+      function dispatch(vault) {
+        vaultForm.hidden = true;
+        opening.hidden = false;
+        openingVault.textContent = vault;
+        const url = buildUrl(vault);
+        manualLink.href = url;
+        // Trigger the obsidian:// handler. Browsers stay on this page while the
+        // OS hands the URL to Obsidian, so the fallback link stays visible.
+        location.href = url;
+      }
+
+      function showForm() {
+        opening.hidden = true;
+        vaultForm.hidden = false;
+        formShareName.textContent = name;
+        vaultInput.focus();
+      }
+
+      vaultForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const v = vaultInput.value.trim();
+        if (!v) return;
+        try { localStorage.setItem(STORAGE_KEY, v); } catch (_) {}
+        dispatch(v);
+      });
+
+      changeVault.addEventListener("click", () => {
+        try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+        vaultInput.value = "";
+        showForm();
+      });
+
+      let saved = null;
+      try { saved = localStorage.getItem(STORAGE_KEY); } catch (_) {}
+      if (saved) dispatch(saved);
+      else showForm();
+    })();
+  </script>
+</body>
+</html>

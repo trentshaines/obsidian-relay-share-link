@@ -1,6 +1,6 @@
 {
   "name": "obsidian-relay-share-link",
-  "version": "0.1.1",
+  "version": "0.3.0",
   "description": "Copy and open share-folder-relative deep links to notes inside a Relay shared folder.",
   "main": "main.js",
   "scripts": {

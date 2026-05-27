@@ -20,6 +20,7 @@ interface RelayPluginApi {
 
 const RELAY_PLUGIN_ID = "system3-relay";
 const URI_ACTION = "relay-share";
+const WEB_PAGE = "https://trentshaines.github.io/obsidian-relay-share-link/";
 
 export default class RelayShareLinkPlugin extends Plugin {
   async onload() {
@@ -84,11 +85,10 @@ export default class RelayShareLinkPlugin extends Plugin {
           ? file.path.slice(share.path.length + 1)
           : file.path;
     const params = new URLSearchParams();
-    params.set("vault", this.app.vault.getName());
     params.set("share", share.relayId);
     params.set("path", rel);
     if (share.name) params.set("name", share.name);
-    const url = `obsidian://${URI_ACTION}?${params.toString()}`;
+    const url = `${WEB_PAGE}?${params.toString()}`;
     await navigator.clipboard.writeText(url);
     new Notice(`Copied Relay link: ${rel || "(folder root)"}`);
   }
