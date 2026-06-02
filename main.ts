@@ -1,4 +1,6 @@
-import { Plugin, Notice, TFile } from "obsidian";
+import { Plugin, Notice, TFile, MarkdownView } from "obsidian";
+
+const ACTION_CLASS = "relay-share-link-action";
 
 interface RelaySharedFolder {
   path: string;
@@ -52,6 +54,37 @@ export default class RelayShareLinkPlugin extends Plugin {
         );
       }),
     );
+
+    this.registerEvent(
+      this.app.workspace.on("file-open", () => this.refreshAllShareButtons()),
+    );
+    this.registerEvent(
+      this.app.workspace.on("active-leaf-change", () => this.refreshAllShareButtons()),
+    );
+    this.app.workspace.onLayoutReady(() => this.refreshAllShareButtons());
+  }
+
+  onunload() {
+    document.querySelectorAll(`.${ACTION_CLASS}`).forEach((el) => el.remove());
+  }
+
+  private refreshAllShareButtons() {
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      const view = leaf.view;
+      if (view instanceof MarkdownView) this.refreshShareButton(view);
+    });
+  }
+
+  private refreshShareButton(view: MarkdownView) {
+    view.containerEl
+      .querySelectorAll(`.${ACTION_CLASS}`)
+      .forEach((el) => el.remove());
+    const file = view.file;
+    if (!file || !this.isInShare(file.path)) return;
+    const btn = view.addAction("share", "Copy Relay share link", () =>
+      this.copyLink(file),
+    );
+    btn.classList.add(ACTION_CLASS);
   }
 
   private isInShare(path: string): boolean {
