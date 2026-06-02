@@ -26,6 +26,32 @@ export default class RelayShareLinkPlugin extends Plugin {
         return true;
       },
     });
+
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        if (!(file instanceof TFile)) return;
+        if (!this.isInShare(file.path)) return;
+        menu.addItem((item) =>
+          item
+            .setTitle("Copy Relay share link")
+            .setIcon("link")
+            .onClick(() => this.copyLink(file)),
+        );
+      }),
+    );
+
+    this.registerEvent(
+      this.app.workspace.on("editor-menu", (menu, _editor, view) => {
+        const file = view.file;
+        if (!file || !this.isInShare(file.path)) return;
+        menu.addItem((item) =>
+          item
+            .setTitle("Copy Relay share link")
+            .setIcon("link")
+            .onClick(() => this.copyLink(file)),
+        );
+      }),
+    );
   }
 
   private isInShare(path: string): boolean {
